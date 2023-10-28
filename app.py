@@ -30,16 +30,20 @@ def get_text_chunks(text):
     return chunks
 
 
-def get_vectorstore(text_chunks):
-  #embeddings = OpenAIEmbeddings()
-    embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+def get_vectorstore(text_chunks, embeddings_model):
+    if(embeddings_model == "Open AI"):
+        embeddings = OpenAIEmbeddings()
+    elif(embeddings_model == "Huggingface"):
+        embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vectorstore
 
 
-def get_conversation_chain(vectorstore):
-    #llm = ChatOpenAI()
-    llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
+def get_conversation_chain(vectorstore, ai_model):
+    if (ai_model == "Open AI"):
+        llm = ChatOpenAI()
+    elif (ai_model == "Huggingface"):
+        llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
 
     memory = ConversationBufferMemory(
         memory_key='chat_history', return_messages=True)
@@ -82,10 +86,18 @@ def main():
 
     with st.sidebar:
         st.subheader("Your documents")
+      
         pdf_docs = st.file_uploader(
             "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
+        embeddings_model = st.selectbox(
+            'Please select Embeddings?',
+            ('Huggingface', 'Open AI'))
+        ai_model = st.selectbox(
+            'Please select model?',
+            ('Huggingface', 'Open AI'))
         if st.button("Process"):
             with st.spinner("Processing"):
+                st.write("Processing with " + embeddings_model + " embeddings and " + ai_model + " as the AI model") 
                 # get pdf text
                 raw_text = get_pdf_text(pdf_docs)
 
@@ -93,11 +105,11 @@ def main():
                 text_chunks = get_text_chunks(raw_text)
 
                 # create vector store
-                vectorstore = get_vectorstore(text_chunks)
+                vectorstore = get_vectorstore(text_chunks, embeddings_model)
 
                 # create conversation chain
                 st.session_state.conversation = get_conversation_chain(
-                    vectorstore)
+                    vectorstore, ai_model)
 
 
 if __name__ == '__main__':
