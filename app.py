@@ -31,18 +31,18 @@ def get_text_chunks(text):
 
 
 def get_vectorstore(text_chunks, embeddings_model):
-    if(embeddings_model == "Open AI"):
+    if(embeddings_model == "Ada v2"):
         embeddings = OpenAIEmbeddings()
-    elif(embeddings_model == "Huggingface"):
+    elif(embeddings_model == "hkunlp/instructor-xl"):
         embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vectorstore
 
 
 def get_conversation_chain(vectorstore, ai_model):
-    if (ai_model == "Open AI"):
+    if (ai_model == "GPT 3.5"):
         llm = ChatOpenAI()
-    elif (ai_model == "Huggingface"):
+    elif (ai_model == "google/flan-t5-xxl"):
         llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
 
     memory = ConversationBufferMemory(
@@ -70,6 +70,12 @@ def handle_userinput(user_question):
 
 def main():
     load_dotenv()
+     bedrock = boto3.client(
+        service_name='bedrock-runtime',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name='us-east-1'
+    )
     st.set_page_config(page_title="Chat with multiple PDFs",
                        page_icon=":books:")
     st.write(css, unsafe_allow_html=True)
@@ -91,10 +97,10 @@ def main():
             "Upload your PDFs here and click on 'Process'", accept_multiple_files=True)
         embeddings_model = st.selectbox(
             'Please select Embeddings?',
-            ('Huggingface', 'Open AI'))
+            ('Ada v2', 'hkunlp/instructor-xl'))
         ai_model = st.selectbox(
             'Please select model?',
-            ('Huggingface', 'Open AI'))
+            ('GPT 3.5', 'google/flan-t5-xxl'))
         if st.button("Process"):
             with st.spinner("Processing"):
                 st.write("Processing with " + embeddings_model + " embeddings and " + ai_model + " as the AI model") 
